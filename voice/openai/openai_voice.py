@@ -22,17 +22,20 @@ class OpenaiVoice(Voice):
         logger.debug("[Openai] voice file name={}".format(voice_file))
         try:
             file = open(voice_file, "rb")
-            api_base = conf().get("open_ai_api_base") or "https://api.openai.com/v1"
+            #api_base = conf().get("open_ai_api_base") or "https://api.openai.com/v1"
+            api_base = conf().get("siliconflow_api_base") or "https://api.siliconflow.cn/v1"
             url = f'{api_base}/audio/transcriptions'
             headers = {
-                'Authorization': 'Bearer ' + conf().get("open_ai_api_key"),
+                #'Authorization': 'Bearer ' + conf().get("open_ai_api_key"),
+                'Authorization': 'Bearer ' + conf().get("siliconflow_api_key"),
                 # 'Content-Type': 'multipart/form-data' # 加了会报错，不知道什么原因
             }
             files = {
                 "file": file,
             }
             data = {
-                "model": "whisper-1",
+                #"model": "whisper-1",
+                "model": conf().get("voice_to_text_model"),
             }
             response = requests.post(url, headers=headers, files=files, data=data)
             response_data = response.json()
@@ -40,6 +43,7 @@ class OpenaiVoice(Voice):
             reply = Reply(ReplyType.TEXT, text)
             logger.info("[Openai] voiceToText text={} voice file name={}".format(text, voice_file))
         except Exception as e:
+            logger.error(f"[OpenAI] voiceToText error: {e}")
             reply = Reply(ReplyType.ERROR, "我暂时还无法听清您的语音，请稍后再试吧~")
         finally:
             return reply
@@ -47,10 +51,12 @@ class OpenaiVoice(Voice):
 
     def textToVoice(self, text):
         try:
-            api_base = conf().get("open_ai_api_base") or "https://api.openai.com/v1"
+            #api_base = conf().get("open_ai_api_base") or "https://api.openai.com/v1"
+            api_base = conf().get("siliconflow_api_base") or "https://api.siliconflow.cn/v1"
             url = f'{api_base}/audio/speech'
             headers = {
-                'Authorization': 'Bearer ' + conf().get("open_ai_api_key"),
+                #'Authorization': 'Bearer ' + conf().get("open_ai_api_key"),
+                'Authorization': 'Bearer ' + conf().get("siliconflow_api_key"),
                 'Content-Type': 'application/json'
             }
             data = {

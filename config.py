@@ -208,6 +208,10 @@ available_setting = {
     "Minimax_group_id": "",
     "Minimax_base_url": "",
     "web_port": 9899,
+    #silicon flow 平台配置
+    "siliconflow_api_key": "",
+    "siliconflow_api_base": "https://api.siliconflow.cn/v1",
+    "voice_to_text_model": "FunAudioLLM/SenseVoiceSmall",
 }
 
 
