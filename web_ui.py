@@ -4,6 +4,7 @@ import signal
 import time
 import requests
 from logging import getLogger
+import json
 
 import gradio as gr
 
@@ -144,7 +145,9 @@ def start_run():
             gr.update(visible=True, variant="secondary"), # 重启按钮
             gr.update(visible=False), # 退出按钮
             gr.update(visible=False), # 二维码
-            gr.update(visible=False)  # 头像
+            gr.update(visible=False), # 头像
+            gr.update(visible=True), # keywords_group
+            gr.update(value=load_keywords()) # keywords_list
         )
         
     if conf().get("channel_type") == "gewechat":
@@ -157,7 +160,9 @@ def start_run():
                 gr.update(visible=True, variant="secondary"), # 重启按钮
                 gr.update(visible=True), # 退出按钮
                 gr.update(visible=False), # 二维码
-                gr.update(visible=True, value=get_avatar_image()) # 头像
+                gr.update(visible=True, value=get_avatar_image()), # 头像
+                gr.update(visible=True), # keywords_group
+                gr.update(value=load_keywords()) # keywords_list
             )
         else:
             return (
@@ -167,7 +172,9 @@ def start_run():
                 gr.update(visible=True, variant="secondary"), # 重启按钮
                 gr.update(visible=False),# 退出按钮
                 gr.update(visible=True, value=get_qrcode_image()), # 二维码
-                gr.update(visible=False) # 头像
+                gr.update(visible=False), # 头像
+                gr.update(visible=True), # keywords_group
+                gr.update(value=load_keywords()) # keywords_list
             )
     return (
         gr.update(value="重启成功😀"), # 状态
@@ -176,7 +183,9 @@ def start_run():
         gr.update(visible=True, variant="secondary"), # 重启按钮
         gr.update(visible=False), # 退出按钮
         gr.update(visible=True, value=get_qrcode_image()), # 二维码
-        gr.update(visible=False) # 头像
+        gr.update(visible=False), # 头像
+        gr.update(visible=True), # keywords_group
+        gr.update(value=load_keywords()) # keywords_list
     )
     
 def get_qrcode_image():
@@ -200,6 +209,39 @@ def verify_login(username, password):
         return True
     return False
 
+def load_keywords():
+    """加载关键词列表"""
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            keywords = config.get('group_chat_keyword', ["bot", "@bot"])
+            return "\n".join(keywords)  # 转换为多行文本
+    except Exception as e:
+        logger.error(f"加载失败: {str(e)}")
+        return "bot\n@bot"
+
+def save_keywords(keywords_text):
+    """保存关键词到配置文件"""
+    try:
+        # 将多行文本转换为列表，过滤空行
+        keywords = [k.strip() for k in keywords_text.split('\n') if k.strip()]
+        
+        # 读取配置文件
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        # 更新关键词列表
+        config['group_chat_keyword'] = keywords
+        
+        # 保存配置
+        with open('config.json', 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+            
+        return "✅ 保存成功"
+    except Exception as e:
+        logger.error(f"保存失败: {str(e)}")
+        return f"❌ 保存失败: {str(e)}"
+
 def login(username, password):
     if verify_login(username, password):
         # 获取用户信息
@@ -217,16 +259,18 @@ def login(username, password):
         status_text = "启动成功😀 " + (f"[{nickname}]🤖  已在线✅" if nickname else "")
             
         return (
-            gr.update(visible=True, value=status_text),  # 在顶部状态栏显示状态
-            gr.update(visible=show_qrcode),  # 只在非gewechat或gewechat未登录时显示二维码
-            gr.update(visible=True), 
-            gr.update(visible=show_qrcode),  # 刷新二维码按钮也只在显示二维码时可见
-            gr.update(visible=False),  # Hide username input
-            gr.update(visible=False),  # Hide password input
-            gr.update(visible=False),   # Hide login button
-            gr.update(value=avatar_path, visible=bool(avatar_path)),  # 只在有头像时显示
-            gr.update(visible=False),  # Hide login form group
-            gr.update(visible=True)  # Show control group
+            gr.update(visible=True, value=status_text),  # login_status
+            gr.update(visible=show_qrcode),  # qrcode_image
+            gr.update(visible=True),  # restart_button
+            gr.update(visible=show_qrcode),  # refresh_qrcode_button
+            gr.update(visible=False),  # username_input
+            gr.update(visible=False),  # password_input
+            gr.update(visible=False),  # login_button
+            gr.update(value=avatar_path, visible=bool(avatar_path)),  # user_avatar
+            gr.update(visible=False),  # login_form
+            gr.update(visible=True),  # control_group
+            gr.update(visible=True),  # keywords_group
+            gr.update(value=load_keywords())  # keywords_list
         )
     else:
         return (
@@ -239,7 +283,9 @@ def login(username, password):
             gr.update(visible=True),   # Show login button
             gr.update(visible=False),   # Hide avatar
             gr.update(visible=True),  # Show login form group
-            gr.update(visible=False)  # Hide control group
+            gr.update(visible=False),  # Hide control group
+            gr.update(visible=False),  # 隐藏关键词设置组件
+            gr.update(value=[])  # 清空关键词列表
         )
 
 def logout():
@@ -257,7 +303,9 @@ def logout():
                 gr.update(visible=True), # 重启按钮
                 gr.update(visible=False), # 退出按钮
                 gr.update(visible=True, value=get_qrcode_image()), # 二维码
-                gr.update(visible=False) # 头像
+                gr.update(visible=False), # 头像
+                gr.update(visible=False), # keywords_group
+                gr.update(value=[]) # keywords_list
             )
 
         # 调用 gewechat 退出接口
@@ -273,7 +321,9 @@ def logout():
                 gr.update(visible=True), # 重启按钮
                 gr.update(visible=True), # 退出按钮
                 gr.update(visible=False), # 二维码
-                gr.update(visible=True) # 头像
+                gr.update(visible=True), # 头像
+                gr.update(visible=False), # keywords_group
+                gr.update(value=[]) # keywords_list
             )
         
         client = GewechatClient(base_url, token)
@@ -288,17 +338,21 @@ def logout():
                 gr.update(visible=True), # 重启按钮
                 gr.update(visible=True), # 退出按钮
                 gr.update(visible=False), # 二维码
-                gr.update(visible=True) # 头像
+                gr.update(visible=True), # 头像
+                gr.update(visible=False), # keywords_group
+                gr.update(value=[]) # keywords_list
             )
 
         return (
-            gr.update(value="退出登录成功😀 点击重启服务按钮可重新登录"), # 状态
-            gr.update(visible=False), # 刷新二维码按钮
+            gr.update(value="退出登录成功😀"), # 状态
+            gr.update(visible=True), # 刷新二维码按钮
             gr.update(visible=False), # 刷新状态按钮
-            gr.update(visible=True, variant="primary"), # 重启按钮
+            gr.update(visible=True), # 重启按钮
             gr.update(visible=False), # 退出按钮
-            gr.update(visible=False), # 二维码
-            gr.update(visible=False) # 头像
+            gr.update(visible=True), # 二维码
+            gr.update(visible=False), # 头像
+            gr.update(visible=False), # keywords_group
+            gr.update(value=[]) # keywords_list
         )
         
     except Exception as e:
@@ -310,7 +364,9 @@ def logout():
             gr.update(visible=True), # 重启按钮
             gr.update(visible=True), # 退出按钮
             gr.update(visible=False), # 二维码
-            gr.update(visible=True) # 头像
+            gr.update(visible=True), # 头像
+            gr.update(visible=False), # keywords_group
+            gr.update(value=[]) # keywords_list
         )
 
 def show_logout_confirm():
@@ -469,6 +525,29 @@ with gr.Blocks(title="Dify on WeChat", theme=gr.themes.Soft(radius_size=gr.theme
                             min_width=120
                         )
 
+            # 关键词设置组件
+            with gr.Column(visible=False) as keywords_group:
+                with gr.Column(variant="panel"):
+                    gr.Markdown("### 群聊关键词设置")
+                    gr.Markdown("在下方输入关键词，每行一个，保存后生效")
+                    
+                    # 使用 Textbox 而不是 Dropdown
+                    keywords_input = gr.Textbox(
+                        label="关键词列表",
+                        placeholder="请输入关键词，每行一个\n例如:\nbot\n@bot",
+                        lines=10,
+                        value=load_keywords(),
+                        show_label=True
+                    )
+                    
+                    with gr.Row():
+                        save_btn = gr.Button("保存关键词", variant="primary")
+                        save_status = gr.Textbox(
+                            label="保存状态",
+                            interactive=False,
+                            show_label=True
+                        )
+
     # 退出确认对话框
     with gr.Column(visible=False) as logout_confirm:
         with gr.Column(variant="box"):
@@ -517,7 +596,9 @@ with gr.Blocks(title="Dify on WeChat", theme=gr.themes.Soft(radius_size=gr.theme
             login_button,
             user_avatar,
             login_form,
-            control_group
+            control_group,
+            keywords_group,
+            keywords_input
         ]
     )
 
@@ -546,7 +627,9 @@ with gr.Blocks(title="Dify on WeChat", theme=gr.themes.Soft(radius_size=gr.theme
             restart_button,
             logout_button,
             qrcode_image,
-            user_avatar
+            user_avatar,
+            keywords_group,
+            keywords_input
         ]
     ).then(
         cancel_restart,  # 重启后关闭确认对话框
@@ -589,7 +672,9 @@ with gr.Blocks(title="Dify on WeChat", theme=gr.themes.Soft(radius_size=gr.theme
             restart_button,
             logout_button,
             qrcode_image,
-            user_avatar
+            user_avatar,
+            keywords_group,
+            keywords_input
         ]
     ).then(
         cancel_logout,  # 退出后关闭确认对话框
@@ -607,6 +692,13 @@ with gr.Blocks(title="Dify on WeChat", theme=gr.themes.Soft(radius_size=gr.theme
             qrcode_image,
             user_avatar
         ]
+    )
+
+    # 添加关键词相关事件处理
+    save_btn.click(
+        fn=save_keywords,
+        inputs=[keywords_input],
+        outputs=[save_status]
     )
 
 if __name__ == "__main__":
