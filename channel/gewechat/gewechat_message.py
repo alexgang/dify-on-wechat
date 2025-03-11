@@ -525,9 +525,14 @@ class GeWeChatMessage(ChatMessage):
                 self.is_at = '在群聊中@了你' in self.msg.get('Data', {}).get('PushContent', '')
                 logger.debug(f"[gewechat] Parse is_at from PushContent. self.is_at: {self.is_at}")
 
-            # 如果是群消息，使用正则表达式去掉wxid前缀和@信息
-            self.content = re.sub(f'{self.actual_user_id}:\n', '', self.content)  # 去掉wxid前缀
-            self.content = re.sub(r'@[^\u2005]+\u2005', '', self.content)  # 去掉@信息
+            if isinstance(self.content, str):
+                # 如果是群消息，使用正则表达式去掉wxid前缀和@信息
+                self.content = re.sub(f'{self.actual_user_id}:\n', '', self.content)  # 去掉wxid前缀
+                self.content = re.sub(r'@[^\u2005]+\u2005', '', self.content)  # 去掉@信息
+            else:
+                # 如果content不是字符串，打日志，输出content的类型和内容
+                logger.warning(f"[gewechat] content is not a string: {type(self.content)}, content: {self.content}")
+  
         else:
             # 如果不是群聊消息，保持结构统一，也要设置actual_user_id和actual_user_nickname
             self.actual_user_id = self.other_user_id
